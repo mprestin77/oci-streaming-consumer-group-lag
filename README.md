@@ -24,6 +24,8 @@ The printed `TOTAL raw_offset_gap` is the sum across all partitions.
 
 If `TOTAL raw_offset_gap=0`, the consumer group is fully caught up.
 
+In Kafka-style offset semantics, `raw_offset_gap=1` on a partition, or `TOTAL raw_offset_gap=1`, can still mean the consumer is effectively caught up. This happens because the partition high watermark is typically the next offset after the last message, not the last consumed message offset itself.
+
 ## Prerequisites
 
 - Python 3
