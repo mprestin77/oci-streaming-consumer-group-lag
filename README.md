@@ -208,7 +208,7 @@ export OCI_STREAM_ID='ocid1.stream.oc1.iad.example'
 export OCI_GROUP_NAME='group1'
 export OCI_KAFKA_BOOTSTRAP_SERVERS='cell-1.streaming.us-ashburn-1.oci.oraclecloud.com:9092'
 export OCI_KAFKA_SASL_USERNAME='tenant/user/ocid1.streampool.oc1.iad.example'
-export OCI_KAFKA_SASL_PASSWORD='your_token_here'
+export OCI_KAFKA_SASL_PASSWORD='your_authetication_token'
 export OCI_CONFIG_PROFILE='DEFAULT'
 ```
 
@@ -226,7 +226,7 @@ export OCI_STREAM_ID='ocid1.stream.oc1.iad.example'
 export OCI_GROUP_NAME='group1'
 export OCI_KAFKA_BOOTSTRAP_SERVERS='cell-1.streaming.us-ashburn-1.oci.oraclecloud.com:9092'
 export OCI_KAFKA_SASL_USERNAME='tenant/user/ocid1.streampool.oc1.iad.example'
-export OCI_KAFKA_SASL_PASSWORD='your_token_here'
+export OCI_KAFKA_SASL_PASSWORD='your_authetication_token'
 export OCI_USE_INSTANCE_PRINCIPAL='true'
 ```
 
