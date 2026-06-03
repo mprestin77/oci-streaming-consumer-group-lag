@@ -1,9 +1,45 @@
 #!/usr/bin/env python3
 
 import os
+
 import certifi
 import oci
 from confluent_kafka import Consumer, TopicPartition
+
+
+def env_flag(name):
+      return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def region_from_bootstrap_servers():
+      for server in os.environ["OCI_KAFKA_BOOTSTRAP_SERVERS"].split(","):
+          endpoint = server.strip().split(":", 1)[0]
+          parts = endpoint.split(".")
+          for index, part in enumerate(parts):
+              if part == "streaming" and index + 1 < len(parts):
+                  return parts[index + 1]
+      return None
+
+
+def load_auth():
+      if env_flag("OCI_USE_INSTANCE_PRINCIPAL"):
+          region = os.getenv("OCI_REGION") or region_from_bootstrap_servers()
+          if not region:
+              raise RuntimeError(
+                  "OCI_REGION must be set when using instance principals if the region "
+                  "cannot be derived from OCI_KAFKA_BOOTSTRAP_SERVERS."
+              )
+          signer = oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
+          return {"region": region}, signer
+
+      profile = os.getenv("OCI_CONFIG_PROFILE", "DEFAULT")
+      return oci.config.from_file(profile_name=profile), None
+
+
+def build_client(client_class, config, signer=None, **kwargs):
+      if signer is None:
+          return client_class(config, **kwargs)
+      return client_class(config, signer=signer, **kwargs)
 
 
 def build_kafka_consumer():
@@ -22,20 +58,24 @@ def build_kafka_consumer():
 def main():
       stream_id = os.environ["OCI_STREAM_ID"]
       group_name = os.environ["OCI_GROUP_NAME"]
-      profile = os.getenv("OCI_CONFIG_PROFILE", "DEFAULT")
-
-      config = oci.config.from_file(profile_name=profile)
+      config, signer = load_auth()
 
       # OCI admin call: get stream metadata.
-      admin_client = oci.streaming.StreamAdminClient(config)
+      admin_client = build_client(
+          oci.streaming.StreamAdminClient,
+          config,
+          signer=signer,
+      )
       stream = admin_client.get_stream(stream_id).data
 
       topic = stream.name
       messages_endpoint = stream.messages_endpoint
 
       # OCI data-plane call: get consumer group state.
-      stream_client = oci.streaming.StreamClient(
+      stream_client = build_client(
+          oci.streaming.StreamClient,
           config,
+          signer=signer,
           service_endpoint=messages_endpoint,
       )
       group = stream_client.get_group(stream_id, group_name).data

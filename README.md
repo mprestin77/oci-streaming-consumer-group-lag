@@ -27,8 +27,10 @@ If `TOTAL raw_offset_gap=0`, the consumer group is fully caught up.
 ## Prerequisites
 
 - Python 3
-- OCI config file in `~/.oci/config`
-- An OCI profile with permission to read stream metadata and consumer group state
+- Either:
+  - OCI config file in `~/.oci/config`, or
+  - an OCI instance with instance principals enabled
+- Permission to read stream metadata and consumer group state
 - For `get-stream-gap-metrics.py`, permission to publish OCI Monitoring custom metrics
 
 Python packages:
@@ -68,10 +70,16 @@ Optional for both scripts:
 
 ```bash
 export OCI_CONFIG_PROFILE='DEFAULT'
+export OCI_USE_INSTANCE_PRINCIPAL='true'
+export OCI_REGION='us-ashburn-1'
 ```
 
 - `OCI_CONFIG_PROFILE`
-  OCI config profile name. Default: `DEFAULT`
+  OCI config profile name. Default: `DEFAULT`. Used only when `OCI_USE_INSTANCE_PRINCIPAL` is not set.
+- `OCI_USE_INSTANCE_PRINCIPAL`
+  Set to `true` to use OCI instance principals for OCI API authentication instead of the OCI config file.
+- `OCI_REGION`
+  Optional region override when using instance principals. If not set, the scripts try to derive the region from `OCI_KAFKA_BOOTSTRAP_SERVERS`.
 
 Additional optional variables for `get-stream-gap-metrics.py`:
 
@@ -90,15 +98,29 @@ export OCI_MONITORING_COMPARTMENT_ID='<compartment_ocid>'
 
 ## Usage
 
-Run lag inspection only:
+Use OCI config file authentication:
 
 ```bash
+python3 get-stream-gap.py
+```
+
+Use instance principals:
+
+```bash
+export OCI_USE_INSTANCE_PRINCIPAL='true'
 python3 get-stream-gap.py
 ```
 
 Run lag inspection and publish a custom metric:
 
 ```bash
+python3 get-stream-gap-metrics.py
+```
+
+Run lag inspection and publish a custom metric with instance principals:
+
+```bash
+export OCI_USE_INSTANCE_PRINCIPAL='true'
 python3 get-stream-gap-metrics.py
 ```
 
@@ -179,6 +201,8 @@ crontab -e
 
 ## Example Environment Setup
 
+Using OCI config file authentication:
+
 ```bash
 export OCI_STREAM_ID='ocid1.stream.oc1.iad.example'
 export OCI_GROUP_NAME='group1'
@@ -195,8 +219,27 @@ python3 get-stream-gap.py
 python3 get-stream-gap-metrics.py
 ```
 
+Using instance principals:
+
+```bash
+export OCI_STREAM_ID='ocid1.stream.oc1.iad.example'
+export OCI_GROUP_NAME='group1'
+export OCI_KAFKA_BOOTSTRAP_SERVERS='cell-1.streaming.us-ashburn-1.oci.oraclecloud.com:9092'
+export OCI_KAFKA_SASL_USERNAME='tenant/user/ocid1.streampool.oc1.iad.example'
+export OCI_KAFKA_SASL_PASSWORD='your_token_here'
+export OCI_USE_INSTANCE_PRINCIPAL='true'
+```
+
+Then run:
+
+```bash
+python3 get-stream-gap.py
+python3 get-stream-gap-metrics.py
+```
+
 ## Notes
 
 - The OCI config profile should use the same region as the target stream.
-- `get-stream-gap-metrics.py` uses the OCI Monitoring telemetry ingestion endpoint for the region in the OCI config profile.
+- When using instance principals, the scripts still require the Kafka SASL username and password to query Kafka watermarks.
+- `get-stream-gap-metrics.py` uses the OCI Monitoring telemetry ingestion endpoint for the configured or detected region.
 - The original metric is based on exact offset lag, not an estimated "messages behind" value.
